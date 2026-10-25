@@ -1,1 +1,1017 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>채널펫(ChannelPet) B2B 도매 발주 시스템</title>
+    <!-- Tailwind CSS CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        channel: {
+                            cyan: '#00a0e9',
+                            dark: '#222222',
+                            light: '#f4f9fd',
+                            accent: '#0085c2'
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- FontAwesome CDN for Icons -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <!-- Google Fonts Inter & Spoqa Han Sans Neo -->
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@300;400;500;700;900&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans KR', sans-serif; }
+        /* Custom scrollbar */
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #f1f1f1; }
+        ::-webkit-scrollbar-thumb { background: #c1c1c1; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #00a0e9; }
+    </style>
+</head>
+<body class="bg-gray-50 text-gray-800 antialiased min-h-screen flex flex-col">
 
+    <!-- Top Notification Banner for Push Alert Simulation -->
+    <div id="push-banner" class="hidden fixed top-4 right-4 z-50 bg-gray-900 border-l-4 border-[#00a0e9] text-white px-5 py-4 rounded-xl shadow-2xl flex items-center space-x-4 max-w-md animate-bounce">
+        <div class="bg-[#00a0e9] text-white p-2.5 rounded-lg flex items-center justify-center">
+            <i class="fa-solid fa-bell text-lg"></i>
+        </div>
+        <div class="flex-1">
+            <p class="text-xs text-[#00a0e9] font-bold uppercase tracking-wider">실시간 영업 푸시 알림</p>
+            <p id="push-message" class="text-sm font-medium mt-0.5">신규 발주가 접수되었습니다.</p>
+        </div>
+        <button onclick="hidePushBanner()" class="text-gray-400 hover:text-white"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+
+    <!-- Header & Brand Navigation -->
+    <header class="bg-[#222222] text-white sticky top-0 z-40 shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-20 flex items-center justify-between">
+            <!-- Brand Logo -->
+            <div class="flex items-center space-x-3 cursor-pointer" onclick="switchView('catalog')">
+                <div class="bg-[#00a0e9] text-white font-black text-2xl tracking-tighter px-3 py-1.5 rounded-lg flex items-center shadow-lg">
+                    <span>CP</span>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-1.5">
+                        <span class="text-xl font-black tracking-tight text-white">CHANNEL</span>
+                        <span class="text-xl font-black tracking-tight text-[#00a0e9]">PET</span>
+                    </div>
+                    <p class="text-[10px] text-gray-400 tracking-widest font-semibold uppercase">B2B Wholesale & Partner Hub</p>
+                </div>
+            </div>
+
+            <!-- Navigation Links based on Role -->
+            <nav class="hidden md:flex items-center space-x-6 text-sm font-medium">
+                <button onclick="switchView('catalog')" id="nav-catalog" class="nav-btn text-[#00a0e9] hover:text-[#00a0e9] transition font-semibold pb-1 border-b-2 border-[#00a0e9]">
+                    <i class="fa-solid fa-box-open mr-1.5"></i> 상품 카탈로그
+                </button>
+                <button onclick="switchView('orders')" id="nav-orders" class="nav-btn text-gray-300 hover:text-[#00a0e9] transition pb-1 border-b-2 border-transparent">
+                    <i class="fa-solid fa-file-invoice-dollar mr-1.5"></i> 발주/주문 내역
+                </button>
+                <button onclick="switchView('dashboard')" id="nav-dashboard" class="nav-btn text-gray-300 hover:text-[#00a0e9] transition pb-1 border-b-2 border-transparent hidden">
+                    <i class="fa-solid fa-chart-line mr-1.5"></i> 담당 영업 관리
+                </button>
+                <button onclick="switchView('admin')" id="nav-admin" class="nav-btn text-gray-300 hover:text-[#00a0e9] transition pb-1 border-b-2 border-transparent hidden">
+                    <i class="fa-solid fa-shield-halved mr-1.5 text-amber-400"></i> 마스터 관리자
+                </button>
+            </nav>
+
+            <!-- User Status & Role Switcher Trigger -->
+            <div class="flex items-center space-x-3">
+                <div class="hidden sm:block text-right">
+                    <div id="current-user-name" class="text-sm font-bold text-white">멍멍하우스 (클라이언트)</div>
+                    <div id="current-user-role" class="text-xs text-[#00a0e9] font-medium">담당: 김영업 대리</div>
+                </div>
+                <button onclick="openRoleModal()" class="bg-[#00a0e9] hover:bg-[#0085c2] text-white px-3.5 py-2 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-md">
+                    <i class="fa-solid fa-user-gear"></i>
+                    <span>권한/모드 전환</span>
+                </button>
+                <button onclick="openSignupModal()" class="bg-gray-800 hover:bg-gray-700 text-gray-200 border border-gray-700 px-3 py-2 rounded-xl text-xs font-semibold transition hidden sm:block">
+                    업체 회원가입
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Main Container Area -->
+    <main class="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8">
+
+        <!-- VIEW 1: PRODUCT CATALOG & ORDER CART (Client & General View) -->
+        <div id="view-catalog" class="space-y-6">
+            <!-- Welcome Banner & Search -->
+            <div class="bg-gradient-to-r from-[#222222] to-gray-800 rounded-3xl p-6 sm:p-8 text-white shadow-xl relative overflow-hidden flex flex-col md:flex-row justify-between items-center">
+                <div class="absolute right-0 bottom-0 opacity-10 transform translate-x-10 translate-y-10 pointer-events-none">
+                    <i class="fa-solid fa-paw text-9xl text-[#00a0e9]"></i>
+                </div>
+                <div class="space-y-2 z-10 mb-4 md:mb-0">
+                    <span class="bg-[#00a0e9]/20 text-[#00a0e9] text-xs font-bold px-3 py-1 rounded-full border border-[#00a0e9]/30">채널펫 파트너 전용 도매몰</span>
+                    <h1 class="text-2xl sm:text-3xl font-black tracking-tight">프리미엄 펫푸드 & 용품 실시간 발주</h1>
+                    <p class="text-gray-300 text-sm max-w-xl">최소발주수량(MOQ)에 맞춰 간편하게 발주서를 작성하고, 담당 영업사원과 실시간으로 연동되는 B2B 서비스를 경험하세요.</p>
+                </div>
+                <div class="flex items-center space-x-3 z-10 w-full md:w-auto">
+                    <div class="relative flex-1 md:w-72">
+                        <span class="absolute inset-y-0 left-0 pl-3 flex items-center pointer-events-none text-gray-400">
+                            <i class="fa-solid fa-search"></i>
+                        </span>
+                        <input type="text" id="product-search" oninput="filterProducts()" placeholder="상품명, 브랜드 검색..." class="w-full pl-10 pr-4 py-2.5 bg-gray-900/80 border border-gray-700 rounded-xl text-sm text-white placeholder-gray-400 focus:outline-none focus:border-[#00a0e9]">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Categories / Filter Pills -->
+            <div class="flex items-center space-x-2 overflow-x-auto pb-2 text-sm font-medium">
+                <button onclick="filterCategory('전체')" class="cat-pill px-4 py-2 rounded-xl bg-[#222222] text-white transition shadow-sm whitespace-nowrap">전체 상품</button>
+                <button onclick="filterCategory('사료/간식')" class="cat-pill px-4 py-2 rounded-xl bg-white text-gray-600 hover:bg-gray-100 transition shadow-sm whitespace-nowrap">사료 / 간식</button>
+                <button onclick="filterCategory('영양제')" class="cat-pill px-4 py-2 rounded-xl bg-white text-gray-600 hover:bg-gray-100 transition shadow-sm whitespace-nowrap">건강 영양제</button>
+                <button onclick="filterCategory('위생/용품')" class="cat-pill px-4 py-2 rounded-xl bg-white text-gray-600 hover:bg-gray-100 transition shadow-sm whitespace-nowrap">위생 / 리빙 용품</button>
+            </div>
+
+            <!-- Main Grid: Products (Left) & Cart / Quick Summary (Right) -->
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+                <!-- Products List (2 Cols) -->
+                <div class="lg:col-span-2 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h2 class="text-lg font-bold text-gray-900 flex items-center">
+                            <i class="fa-solid fa-boxes-stacked text-[#00a0e9] mr-2"></i> 상품 리스트 <span id="product-count" class="ml-2 text-xs bg-gray-200 text-gray-700 px-2 py-0.5 rounded-full font-semibold">0개</span>
+                        </h2>
+                        <span class="text-xs text-gray-500">* 공급가는 부가세 별도 금액입니다.</span>
+                    </div>
+
+                    <div id="product-grid" class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                        <!-- Dynamic Product Cards will be injected here -->
+                    </div>
+                </div>
+
+                <!-- Cart & Order Submission Box (1 Col) -->
+                <div class="space-y-4">
+                    <div class="bg-white rounded-3xl p-6 shadow-xl border border-gray-100 sticky top-28">
+                        <div class="flex justify-between items-center pb-4 border-b border-gray-100">
+                            <h3 class="font-bold text-gray-900 text-base flex items-center">
+                                <i class="fa-solid fa-cart-shopping text-[#00a0e9] mr-2"></i> 실시간 발주 장바구니
+                            </h3>
+                            <button onclick="clearCart()" class="text-xs text-gray-400 hover:text-red-500 transition">전체 삭제</button>
+                        </div>
+
+                        <!-- Cart Items List -->
+                        <div id="cart-items" class="py-4 space-y-3 max-h-72 overflow-y-auto divide-y divide-gray-50">
+                            <div class="text-center py-8 text-gray-400 text-sm">
+                                <i class="fa-solid fa-basket-shopping text-3xl mb-2 block text-gray-300"></i>
+                                장바구니가 비어 있습니다.<br>상품을 담아 발주를 진행하세요.
+                            </div>
+                        </div>
+
+                        <!-- Price Summary -->
+                        <div class="pt-4 border-t border-gray-100 space-y-2 text-sm">
+                            <div class="flex justify-between text-gray-600">
+                                <span>공급가 합계</span>
+                                <span id="cart-subtotal" class="font-semibold text-gray-900">0 원</span>
+                            </div>
+                            <div class="flex justify-between text-gray-600">
+                                <span>부가세 (10%)</span>
+                                <span id="cart-vat" class="font-semibold text-gray-900">0 원</span>
+                            </div>
+                            <div class="flex justify-between text-base font-bold text-gray-900 pt-2 border-t border-dashed border-gray-200">
+                                <span>총 발주 금액</span>
+                                <span id="cart-total" class="text-[#00a0e9] text-lg">0 원</span>
+                            </div>
+                        </div>
+
+                        <!-- Action Buttons -->
+                        <div class="mt-6 space-y-2.5">
+                            <button onclick="submitOrder()" id="checkout-btn" class="w-full bg-[#00a0e9] hover:bg-[#0085c2] text-white py-3.5 rounded-2xl font-bold transition shadow-lg shadow-[#00a0e9]/30 flex items-center justify-center space-x-2 disabled:opacity-50 disabled:cursor-not-allowed">
+                                <i class="fa-solid fa-paper-plane"></i>
+                                <span>발주서 제출하기</span>
+                            </button>
+                            <button onclick="downloadClientExcel()" id="excel-btn" class="w-full bg-emerald-600 hover:bg-emerald-700 text-white py-3 rounded-2xl font-semibold transition text-xs flex items-center justify-center space-x-2 disabled:opacity-50">
+                                <i class="fa-solid fa-file-excel"></i>
+                                <span>발주 내역 엑셀(.xlsx) 다운로드</span>
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 2: ORDERS & INVOICES (Client & Sales Rep view) -->
+        <div id="view-orders" class="space-y-6 hidden">
+            <div class="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4 bg-white p-6 rounded-3xl shadow-sm border border-gray-100">
+                <div>
+                    <h2 class="text-xl font-black text-gray-900 flex items-center">
+                        <i class="fa-solid fa-file-invoice text-[#00a0e9] mr-2.5"></i> 발주 및 주문 내역서 관리
+                    </h2>
+                    <p class="text-xs text-gray-500 mt-1">접수된 발주 내역 확인 및 담당 영업사원과의 처리 상태를 확인할 수 있습니다.</p>
+                </div>
+                <div class="flex items-center space-x-2">
+                    <button onclick="downloadMasterExcel()" class="bg-emerald-600 hover:bg-emerald-700 text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-2 shadow-sm">
+                        <i class="fa-solid fa-file-excel"></i>
+                        <span>전체 발주 리스트 엑셀 다운로드</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Orders Table Container -->
+            <div class="bg-white rounded-3xl shadow-xl border border-gray-100 overflow-hidden">
+                <div class="overflow-x-auto">
+                    <table class="w-full text-left border-collapse">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-500 text-xs uppercase font-bold tracking-wider border-b border-gray-100">
+                                <th class="py-4 px-6">발주번호 / 일시</th>
+                                <th class="py-4 px-6">거래처명</th>
+                                <th class="py-4 px-6">담당 영업사원</th>
+                                <th class="py-4 px-6">주문 상품 요약</th>
+                                <th class="py-4 px-6">총 발주금액</th>
+                                <th class="py-4 px-6">진행 상태</th>
+                                <th class="py-4 px-6 text-center">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="orders-table-body" class="divide-y divide-gray-100 text-sm">
+                            <!-- Injected by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 3: SALES REP DASHBOARD (Sales Rep Mode) -->
+        <div id="view-dashboard" class="space-y-6 hidden">
+            <div class="bg-[#222222] text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="bg-[#00a0e9] text-white text-xs font-bold px-3 py-1 rounded-full">영업담당자 전용 포털</span>
+                    <h2 class="text-2xl font-black mt-2" id="rep-welcome-title">김영업 대리님, 환영합니다!</h2>
+                    <p class="text-xs text-gray-300 mt-1">담당하고 계신 거래처들의 발주 현황을 실시간으로 확인하고 관리하세요.</p>
+                </div>
+                <div class="flex space-x-3 bg-gray-800 p-3 rounded-2xl border border-gray-700 text-xs">
+                    <div>
+                        <p class="text-gray-400">담당 업체 수</p>
+                        <p class="text-lg font-bold text-white text-center" id="stat-assigned-clients">20개사</p>
+                    </div>
+                    <div class="border-r border-gray-700"></div>
+                    <div class="px-2">
+                        <p class="text-gray-400">금일 신규 발주</p>
+                        <p class="text-lg font-bold text-[#00a0e9] text-center" id="stat-today-orders">3건</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                <!-- Assigned Clients List -->
+                <div class="bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+                    <h3 class="font-bold text-gray-900 text-base flex items-center">
+                        <i class="fa-solid fa-store text-[#00a0e9] mr-2"></i> 내 담당 거래처 매핑 리스트
+                    </h3>
+                    <p class="text-xs text-gray-500">회원가입 시 본 영업사원을 지정한 거래처 목록입니다.</p>
+                    <div id="assigned-clients-list" class="space-y-2.5 max-h-96 overflow-y-auto pr-1">
+                        <!-- Injected -->
+                    </div>
+                </div>
+
+                <!-- Rep Orders Management -->
+                <div class="lg:col-span-2 bg-white p-6 rounded-3xl shadow-sm border border-gray-100 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-gray-900 text-base flex items-center">
+                            <i class="fa-solid fa-clipboard-list text-[#00a0e9] mr-2"></i> 담당 거래처 실시간 발주 접수함
+                        </h3>
+                        <button onclick="downloadRepExcel()" class="text-xs bg-emerald-600 hover:bg-emerald-700 text-white px-3 py-1.5 rounded-lg font-semibold transition">
+                            <i class="fa-solid fa-file-excel mr-1"></i> 담당 발주 엑셀 다운로드
+                        </button>
+                    </div>
+                    <div id="rep-orders-container" class="space-y-3">
+                        <!-- Injected -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- VIEW 4: MASTER ADMIN DASHBOARD (Master Admin Mode) -->
+        <div id="view-admin" class="space-y-6 hidden">
+            <div class="bg-gradient-to-r from-gray-900 to-[#222222] text-white p-6 sm:p-8 rounded-3xl shadow-xl flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
+                <div>
+                    <span class="bg-amber-500 text-gray-900 text-xs font-extrabold px-3 py-1 rounded-full">마스터 관리자 전용 총괄 모드</span>
+                    <h2 class="text-2xl font-black mt-2">채널펫 B2B 통합 관리 센터</h2>
+                    <p class="text-xs text-gray-300 mt-1">200개 거래처, 10명 영업담당자 매핑 및 상품 카탈로그 전체 관리</p>
+                </div>
+                <div class="flex space-x-2">
+                    <button onclick="openAddProductModal()" class="bg-[#00a0e9] hover:bg-[#0085c2] text-white px-4 py-2.5 rounded-xl text-xs font-bold transition flex items-center space-x-1.5 shadow-lg">
+                        <i class="fa-solid fa-plus"></i>
+                        <span>신규 상품 등록</span>
+                    </button>
+                </div>
+            </div>
+
+            <!-- Tabs in Admin -->
+            <div class="flex space-x-2 border-b border-gray-200 pb-2">
+                <button onclick="switchAdminTab('products')" id="admin-tab-products" class="px-4 py-2 bg-[#222222] text-white rounded-xl text-xs font-bold transition">상품 마스터 관리</button>
+                <button onclick="switchAdminTab('mapping')" id="admin-tab-mapping" class="px-4 py-2 bg-white text-gray-600 hover:bg-gray-100 rounded-xl text-xs font-bold transition">업체 & 영업담당자 매핑 관리</button>
+            </div>
+
+            <!-- Admin Tab 1: Product CRUD -->
+            <div id="admin-content-products" class="space-y-4">
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 overflow-hidden p-6">
+                    <h3 class="font-bold text-gray-900 mb-4 text-base flex items-center">
+                        <i class="fa-solid fa-boxes-stacked text-[#00a0e9] mr-2"></i> 등록된 상품 목록 및 가격 정책
+                    </h3>
+                    <div id="admin-product-table" class="space-y-3">
+                        <!-- Injected -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Admin Tab 2: Mapping List -->
+            <div id="admin-content-mapping" class="space-y-4 hidden">
+                <div class="bg-white rounded-3xl shadow-sm border border-gray-100 p-6 space-y-4">
+                    <div class="flex justify-between items-center">
+                        <h3 class="font-bold text-gray-900 text-base flex items-center">
+                            <i class="fa-solid fa-network-wired text-[#00a0e9] mr-2"></i> 전체 200개 거래처 및 10명 영업담당자 매핑 현황
+                        </h3>
+                        <span class="text-xs text-gray-500">* 실시간 매핑 변경 가능</span>
+                    </div>
+                    <div id="admin-mapping-container" class="space-y-2">
+                        <!-- Injected -->
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <!-- FOOTER -->
+    <footer class="bg-[#222222] text-gray-400 text-xs py-8 mt-12 border-t border-gray-800">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col sm:flex-row justify-between items-center gap-4 text-center sm:text-left">
+            <div>
+                <p class="font-bold text-white text-sm">주식회사 채널펫 (ChannelPet)</p>
+                <p class="mt-1">경기도 반려용품 유통 B2B 파트너 센터 | 대표발주문의: 02-000-0000</p>
+            </div>
+            <div>
+                <p class="text-gray-500">© 2026 CHANNELPET B2B System. All Rights Reserved.</p>
+                <a href="https://chpet.kr" target="_blank" class="text-[#00a0e9] hover:underline mt-1 inline-block">공식 홈페이지 (chpet.kr) 바로가기</a>
+            </div>
+        </div>
+    </footer>
+
+    <!-- MODAL: Role Switcher / Login Simulation -->
+    <div id="role-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-md w-full p-6 sm:p-8 space-y-6 shadow-2xl animate-scaleIn">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-[#00a0e9] text-white p-2 rounded-xl">
+                        <i class="fa-solid fa-user-gear"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-gray-900">사용자 권한 및 모드 선택</h3>
+                </div>
+                <button onclick="closeRoleModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-gray-500">프로토타입 테스트를 위해 즉시 권한을 변경하여 각 화면을 확인하실 수 있습니다.</p>
+
+            <div class="space-y-3">
+                <button onclick="setUserRole('client', '멍멍하우스', '김영업 대리')" class="w-full text-left p-4 rounded-2xl border-2 border-gray-100 hover:border-[#00a0e9] hover:bg-[#f4f9fd] transition flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-gray-900 group-hover:text-[#00a0e9]">1. 거래처(업체) 회원 모드</div>
+                        <div class="text-xs text-gray-500 mt-0.5">업체명: 멍멍하우스 | 담당: 김영업 대리</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-gray-300 group-hover:text-[#00a0e9]"></i>
+                </button>
+
+                <button onclick="setUserRole('sales', '김영업 대리', '영업1팀')" class="w-full text-left p-4 rounded-2xl border-2 border-gray-100 hover:border-[#00a0e9] hover:bg-[#f4f9fd] transition flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-gray-900 group-hover:text-[#00a0e9]">2. 영업담당자 모드</div>
+                        <div class="text-xs text-gray-500 mt-0.5">담당자: 김영업 대리 (담당처 20개사 관리)</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-gray-300 group-hover:text-[#00a0e9]"></i>
+                </button>
+
+                <button onclick="setUserRole('admin', '총괄 관리자', '마스터 관리팀')" class="w-full text-left p-4 rounded-2xl border-2 border-gray-100 hover:border-amber-500 hover:bg-amber-50 transition flex items-center justify-between group">
+                    <div>
+                        <div class="font-bold text-gray-900 group-hover:text-amber-600">3. 마스터 관리자 모드</div>
+                        <div class="text-xs text-gray-500 mt-0.5">권한: 상품 마스터, 200개 업체 매핑, 전체 통계 총괄</div>
+                    </div>
+                    <i class="fa-solid fa-arrow-right text-gray-300 group-hover:text-amber-600"></i>
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Client Signup with Sales Rep Mapping -->
+    <div id="signup-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <div class="flex items-center space-x-2">
+                    <div class="bg-[#222222] text-white p-2 rounded-xl">
+                        <i class="fa-solid fa-store"></i>
+                    </div>
+                    <h3 class="text-lg font-black text-gray-900">신규 거래처(업체) 회원가입</h3>
+                </div>
+                <button onclick="closeSignupModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <p class="text-xs text-gray-500">채널펫 B2B 도매 회원가입 시 본사를 전담할 영업 담당자를 직접 선택하여 매핑할 수 있습니다.</p>
+
+            <form onsubmit="handleSignup(event)" class="space-y-4 text-sm">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">상호명 (업체명)</label>
+                    <input type="text" id="signup-company" required placeholder="예: 해피펫샵 강남점" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00a0e9]">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">사업자등록번호</label>
+                        <input type="text" id="signup-bizno" required placeholder="123-45-67890" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00a0e9]">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">대표자명</label>
+                        <input type="text" id="signup-owner" required placeholder="홍길동" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00a0e9]">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">담당 영업사원 지정 (10명 중 선택)</label>
+                    <select id="signup-rep" class="w-full px-4 py-2.5 bg-gray-50 border border-gray-200 rounded-xl focus:outline-none focus:border-[#00a0e9]">
+                        <option value="김영업 대리">김영업 대리 (서울/경기 북부)</option>
+                        <option value="이채널 과장">이채널 과장 (서울/경기 남부)</option>
+                        <option value="박펫 사원">박펫 사원 (인천/경기 서부)</option>
+                        <option value="정유통 과장">정유통 과장 (충청/강원 권역)</option>
+                        <option value="최물류 대리">최물류 대리 (부산/경남 권역)</option>
+                        <option value="한도매 과장">한도매 과장 (대구/경북 권역)</option>
+                        <option value="오파트너 대리">오파트너 대리 (광주/전라 권역)</option>
+                        <option value="강스토어 사원">강스토어 사원 (제주 권역)</option>
+                        <option value="윤매니저 과장">윤매니저 과장 (온라인 제휴 전담)</option>
+                        <option value="송총괄 이사">송총괄 이사 (대형 프랜차이즈 전담)</option>
+                    </select>
+                </div>
+                <button type="submit" class="w-full bg-[#00a0e9] hover:bg-[#0085c2] text-white py-3.5 rounded-xl font-bold transition shadow-lg shadow-[#00a0e9]/20">
+                    회원가입 및 영업담당자 매핑 완료
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- MODAL: Product Detail & Cafe24 Link -->
+    <div id="detail-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl relative">
+            <button onclick="closeDetailModal()" class="absolute top-6 right-6 text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            <div id="detail-content" class="space-y-4">
+                <!-- Injected -->
+            </div>
+        </div>
+    </div>
+
+    <!-- MODAL: Add / Edit Product (Admin) -->
+    <div id="admin-product-modal" class="fixed inset-0 bg-black/60 z-50 flex items-center justify-center p-4 hidden backdrop-blur-sm">
+        <div class="bg-white rounded-3xl max-w-lg w-full p-6 sm:p-8 space-y-6 shadow-2xl">
+            <div class="flex justify-between items-center">
+                <h3 class="text-lg font-black text-gray-900" id="admin-modal-title">신규 상품 등록 (카페24 연동)</h3>
+                <button onclick="closeAddProductModal()" class="text-gray-400 hover:text-gray-600"><i class="fa-solid fa-xmark text-lg"></i></button>
+            </div>
+            <form onsubmit="handleSaveProduct(event)" class="space-y-4 text-sm">
+                <input type="hidden" id="edit-prod-id">
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">상품명</label>
+                    <input type="text" id="edit-prod-name" required placeholder="예: 채널펫 네츄럴 프리미엄 사료 5kg" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">카테고리</label>
+                        <select id="edit-prod-cat" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                            <option value="사료/간식">사료/간식</option>
+                            <option value="영양제">영양제</option>
+                            <option value="위생/용품">위생/용품</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">공급가 (원)</label>
+                        <input type="number" id="edit-prod-price" required placeholder="35000" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                    </div>
+                </div>
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">최소발주수량(MOQ)</label>
+                        <input type="number" id="edit-prod-moq" required value="5" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                    </div>
+                    <div>
+                        <label class="block font-semibold text-gray-700 mb-1">재고 수량</label>
+                        <input type="number" id="edit-prod-stock" required value="120" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                    </div>
+                </div>
+                <div>
+                    <label class="block font-semibold text-gray-700 mb-1">이미지 URL (또는 플레이스홀더)</label>
+                    <input type="text" id="edit-prod-img" value="https://placehold.co/400x300/00a0e9/ffffff?text=ChannelPet+Product" class="w-full px-4 py-2 bg-gray-50 border border-gray-200 rounded-xl">
+                </div>
+                <button type="submit" class="w-full bg-[#00a0e9] hover:bg-[#0085c2] text-white py-3.5 rounded-xl font-bold transition shadow-md">
+                    상품 저장 및 카페24 연동 반영
+                </button>
+            </form>
+        </div>
+    </div>
+
+    <!-- Application JavaScript Logic -->
+    <script>
+        // Mock State Data
+        let currentUser = {
+            name: '멍멍하우스',
+            role: 'client', // 'client', 'sales', 'admin'
+            salesRep: '김영업 대리'
+        };
+
+        let products = [
+            { id: 1, name: '채널펫 홀리스틱 연어 사료 6kg', category: '사료/간식', price: 42000, moq: 5, stock: 150, image: 'https://placehold.co/400x300/222222/00a0e9?text=Holistic+Salmon+6kg', desc: '엄선된 생연어와 유기농 야채 포뮬러, 피부 및 모질 개선 프리미엄 사료.' },
+            { id: 2, name: '채널펫 관절 조인트 헬스 츄 300g', category: '영양제', price: 28000, moq: 10, stock: 240, image: 'https://placehold.co/400x300/00a0e9/ffffff?text=Joint+Health+Chew', desc: '글루코사민과 초록입홍합 추출물 함유 관절 전문 영양 간식.' },
+            { id: 3, name: '채널펫 프리미엄 순수 배변패드 (대형 50매)', category: '위생/용품', price: 15500, moq: 20, stock: 500, image: 'https://placehold.co/400x300/222222/ffffff?text=Premium+Pad+50s', desc: '강력한 탈취력과 빠른 흡수력의 최고급 펄프 배변패드.' },
+            { id: 4, name: '채널펫 산양유 유산균 파우더 150g', category: '영양제', price: 22000, moq: 10, stock: 180, image: 'https://placehold.co/400x300/00a0e9/ffffff?text=Goat+Milk+Probiotics', desc: '네덜란드산 순수 산양유 단백질과 특허 유산균 배합 장 건강 강화제.' },
+            { id: 5, name: '채널펫 치킨텐더 안심 저염 육포 500g', category: '사료/간식', price: 18000, moq: 10, stock: 320, image: 'https://placehold.co/400x300/222222/00a0e9?text=Chicken+Tender+500g', desc: '국내산 닭안심 100% 무첨가 휴먼그레이드 저염 간식.' },
+            { id: 6, name: '채널펫 컴팩트 원터치 반려동물 급수기 2L', category: '위생/용품', price: 34000, moq: 5, stock: 95, image: 'https://placehold.co/400x300/00a0e9/ffffff?text=Water+Fountain+2L', desc: '활성탄 필터 내장 사계절 신선한 유수식 음수기.' }
+        ];
+
+        let cart = [];
+
+        let orders = [
+            { id: 'ORD-2026-0891', date: '2026-10-25 14:20', client: '멍멍하우스', rep: '김영업 대리', summary: '채널펫 홀리스틱 연어 사료 6kg 외 1건', total: 319000, status: '접수 완료' },
+            { id: 'ORD-2026-0885', date: '2026-10-24 11:10', client: '펫스타일 홍대점', rep: '이채널 과장', summary: '채널펫 프리미엄 순수 배변패드 20개', total: 341000, status: '배송 중' },
+            { id: 'ORD-2026-0872', date: '2026-10-22 09:45', client: '강아지와고양이 분당점', rep: '김영업 대리', summary: '채널펫 관절 조인트 헬스 츄 10개', total: 308000, status: '발주 완료' }
+        ];
+
+        let assignedClients = [
+            { name: '멍멍하우스', owner: '김철수', bizno: '123-45-67890', phone: '010-1234-5678', lastOrder: '2026-10-25' },
+            { name: '강아지와고양이 분당점', owner: '영희김', bizno: '234-56-78901', phone: '010-2345-6789', lastOrder: '2026-10-22' },
+            { name: '펫프렌즈 강남딜러', owner: '박민수', bizno: '345-67-89012', phone: '010-3456-7890', lastOrder: '2026-10-20' },
+            { name: '도매니저 파트너샵', owner: '이지훈', bizno: '456-78-90123', phone: '010-4567-8901', lastOrder: '2026-10-18' }
+        ];
+
+        let currentCategory = '전체';
+        let currentAdminTab = 'products';
+
+        // Initialize App on Load
+        window.onload = function() {
+            renderProducts();
+            renderCart();
+            renderOrders();
+            renderAssignedClients();
+            renderAdminProducts();
+            renderAdminMapping();
+            updateRoleUI();
+        };
+
+        // Update Role UI helper
+        function updateRoleUI() {
+            const roleNameMap = {
+                'client': '업체',
+                'sales': '영업담당',
+                'admin': '마스터 관리자'
+            };
+            document.getElementById('current-user-name').textContent = currentUser.name + ' (' + roleNameMap[currentUser.role] + ')';
+            document.getElementById('current-user-role').textContent = currentUser.role === 'client' ? '담당: ' + currentUser.salesRep : currentUser.role === 'sales' ? '담당 영업사원 포털' : '총괄 관리 권한';
+        }
+
+        // Switch Tabs / Views
+        function switchView(viewName) {
+            document.querySelectorAll('#view-catalog, #view-orders, #view-dashboard, #view-admin').forEach(el => el.classList.add('hidden'));
+            document.querySelectorAll('.nav-btn').forEach(el => {
+                el.classList.remove('text-[#00a0e9]', 'border-[#00a0e9]');
+                el.classList.add('text-gray-300', 'border-transparent');
+            });
+
+            document.getElementById('view-' + viewName).classList.remove('hidden');
+            const activeNav = document.getElementById('nav-' + viewName);
+            if(activeNav) {
+                activeNav.classList.remove('text-gray-300', 'border-transparent');
+                activeNav.classList.add('text-[#00a0e9]', 'border-[#00a0e9]');
+            }
+        }
+
+        // Render Product Catalog
+        function filterCategory(cat) {
+            currentCategory = cat;
+            document.querySelectorAll('.cat-pill').forEach(btn => {
+                if(btn.textContent.includes(cat) || (cat==='전체' && btn.textContent.includes('전체'))) {
+                    btn.classList.add('bg-[#222222]', 'text-white');
+                    btn.classList.remove('bg-white', 'text-gray-600');
+                } else {
+                    btn.classList.remove('bg-[#222222]', 'text-white');
+                    btn.classList.add('bg-white', 'text-gray-600');
+                }
+            });
+            renderProducts();
+        }
+
+        function filterProducts() {
+            renderProducts();
+        }
+
+        function renderProducts() {
+            const query = document.getElementById('product-search').value.toLowerCase();
+            const grid = document.getElementById('product-grid');
+            grid.innerHTML = '';
+
+            const filtered = products.filter(p => {
+                const matchCat = currentCategory === '전체' || p.category === currentCategory;
+                const matchQuery = p.name.toLowerCase().includes(query) || p.category.toLowerCase().includes(query);
+                return matchCat && matchQuery;
+            });
+
+            document.getElementById('product-count').textContent = filtered.length + '개';
+
+            if(filtered.length === 0) {
+                grid.innerHTML = '<div class="col-span-2 py-12 text-center text-gray-400 text-sm">검색 결과가 없습니다.</div>';
+                return;
+            }
+
+            filtered.forEach(p => {
+                grid.innerHTML += `
+                    <div class="bg-white rounded-3xl p-5 shadow-sm border border-gray-100 flex flex-col justify-between hover:shadow-md transition">
+                        <div>
+                            <div class="relative rounded-2xl overflow-hidden mb-4 bg-gray-100 aspect-video cursor-pointer" onclick="openDetailModal(${p.id})">
+                                <img src="${p.image}" alt="${p.name}" class="w-full h-full object-cover" onerror="this.src='https://placehold.co/400x300/222222/00a0e9?text=ChannelPet'">
+                                <span class="absolute top-2.5 left-2.5 bg-[#222222]/80 backdrop-blur-md text-white text-[10px] font-bold px-2.5 py-1 rounded-lg">${p.category}</span>
+                            </div>
+                            <h4 class="font-bold text-gray-900 text-sm line-clamp-1 cursor-pointer hover:text-[#00a0e9]" onclick="openDetailModal(${p.id})">${p.name}</h4>
+                            <p class="text-xs text-gray-500 mt-1 line-clamp-2">${p.desc}</p>
+                        </div>
+                        <div class="mt-4 pt-4 border-t border-gray-100 flex items-center justify-between">
+                            <div>
+                                <span class="text-[11px] text-gray-400 block">공급가 (VAT 별도)</span>
+                                <span class="text-base font-black text-gray-900">${p.price.toLocaleString()}원</span>
+                                <span class="text-[10px] text-emerald-600 block font-semibold">최소발주(MOQ): ${p.moq}개</span>
+                            </div>
+                            <button onclick="addToCart(${p.id})" class="bg-[#00a0e9] hover:bg-[#0085c2] text-white px-4 py-2.5 rounded-xl text-xs font-bold transition shadow-md shadow-[#00a0e9]/20 flex items-center space-x-1.5">
+                                <i class="fa-solid fa-cart-plus"></i>
+                                <span>담기</span>
+                            </button>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        // Cart Logic
+        function addToCart(productId) {
+            const product = products.find(p => p.id === productId);
+            const existing = cart.find(item => item.id === productId);
+            if(existing) {
+                existing.qty += product.moq; // Add by MOQ step
+            } else {
+                cart.push({ ...product, qty: product.moq });
+            }
+            renderCart();
+        }
+
+        function updateCartQty(productId, delta) {
+            const item = cart.find(i => i.id === productId);
+            if(item) {
+                item.qty += delta;
+                if(item.qty <= 0) {
+                    cart = cart.filter(i => i.id !== productId);
+                }
+            }
+            renderCart();
+        }
+
+        function clearCart() {
+            cart = [];
+            renderCart();
+        }
+
+        function renderCart() {
+            const container = document.getElementById('cart-items');
+            if(cart.length === 0) {
+                container.innerHTML = `
+                    <div class="text-center py-8 text-gray-400 text-sm">
+                        <i class="fa-solid fa-basket-shopping text-3xl mb-2 block text-gray-300"></i>
+                        장바구니가 비어 있습니다.<br>상품을 담아 발주를 진행하세요.
+                    </div>
+                `;
+                document.getElementById('cart-subtotal').textContent = '0 원';
+                document.getElementById('cart-vat').textContent = '0 원';
+                document.getElementById('cart-total').textContent = '0 원';
+                document.getElementById('checkout-btn').disabled = true;
+                document.getElementById('excel-btn').disabled = true;
+                return;
+            }
+
+            container.innerHTML = '';
+            let subtotal = 0;
+
+            cart.forEach(item => {
+                const itemTotal = item.price * item.qty;
+                subtotal += itemTotal;
+                container.innerHTML += `
+                    <div class="py-3 flex items-center justify-between">
+                        <div class="flex-1 pr-2">
+                            <h5 class="text-xs font-bold text-gray-900 line-clamp-1">${item.name}</h5>
+                            <span class="text-[11px] text-gray-500">${item.price.toLocaleString()}원 × ${item.qty}개</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <div class="flex items-center border border-gray-200 rounded-lg overflow-hidden bg-gray-50">
+                                <button onclick="updateCartQty(${item.id}, -${item.moq})" class="px-2 py-1 text-xs hover:bg-gray-200 text-gray-600">-</button>
+                                <span class="px-2 text-xs font-bold">${item.qty}</span>
+                                <button onclick="updateCartQty(${item.id}, ${item.moq})" class="px-2 py-1 text-xs hover:bg-gray-200 text-gray-600">+</button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+            });
+
+            const vat = Math.floor(subtotal * 0.1);
+            const total = subtotal + vat;
+
+            document.getElementById('cart-subtotal').textContent = subtotal.toLocaleString() + ' 원';
+            document.getElementById('cart-vat').textContent = vat.toLocaleString() + ' 원';
+            document.getElementById('cart-total').textContent = total.toLocaleString() + ' 원';
+            document.getElementById('checkout-btn').disabled = false;
+            document.getElementById('excel-btn').disabled = false;
+        }
+
+        // Submit Order & Simulate Push Notification
+        function submitOrder() {
+            if(cart.length === 0) return;
+
+            const subtotal = cart.reduce((acc, item) => acc + (item.price * item.qty), 0);
+            const vat = Math.floor(subtotal * 0.1);
+            const total = subtotal + vat;
+
+            const newOrder = {
+                id: 'ORD-2026-' + Math.floor(1000 + Math.random() * 9000),
+                date: new Date().toISOString().replace('T', ' ').substring(0, 16),
+                client: currentUser.name,
+                rep: currentUser.salesRep,
+                summary: `${cart[0].name} 외 ${cart.length - 1}건`,
+                total: total,
+                status: '접수 완료'
+            };
+
+            orders.unshift(newOrder);
+            cart = [];
+            renderCart();
+            renderOrders();
+            renderAssignedClients();
+
+            // Trigger Push Notification Banner
+            showPushBanner(`🔔 [신규 발주] ${newOrder.client}에서 ${total.toLocaleString()}원 발주가 접수되었습니다! 담당 영업사원(${newOrder.rep}) 확인 요망`);
+            switchView('orders');
+        }
+
+        function showPushBanner(msg) {
+            const banner = document.getElementById('push-banner');
+            document.getElementById('push-message').textContent = msg;
+            banner.classList.remove('hidden');
+            setTimeout(() => {
+                hidePushBanner();
+            }, 6000);
+        }
+
+        function hidePushBanner() {
+            document.getElementById('push-banner').classList.add('hidden');
+        }
+
+        // Orders Table Render
+        function renderOrders() {
+            const tbody = document.getElementById('orders-table-body');
+            tbody.innerHTML = '';
+
+            let displayOrders = orders;
+            // If client, filter by client name
+            if(currentUser.role === 'client') {
+                displayOrders = orders.filter(o => o.client === currentUser.name);
+            } else if(currentUser.role === 'sales') {
+                displayOrders = orders.filter(o => o.rep === currentUser.name);
+            }
+
+            if(displayOrders.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="7" class="py-8 text-center text-gray-400 text-sm">발주 내역이 없습니다.</td></tr>`;
+                return;
+            }
+
+            displayOrders.forEach(o => {
+                let badgeColor = 'bg-amber-100 text-amber-800';
+                if(o.status === '배송 중') badgeColor = 'bg-blue-100 text-blue-800';
+                if(o.status === '발주 완료') badgeColor = 'bg-emerald-100 text-emerald-800';
+
+                tbody.innerHTML += `
+                    <tr class="hover:bg-gray-50 transition border-b border-gray-100">
+                        <td class="py-4 px-6">
+                            <span class="font-bold text-gray-900 block">${o.id}</span>
+                            <span class="text-xs text-gray-400">${o.date}</span>
+                        </td>
+                        <td class="py-4 px-6 font-semibold text-gray-800">${o.client}</td>
+                        <td class="py-4 px-6 text-gray-600">${o.rep}</td>
+                        <td class="py-4 px-6 text-gray-600 max-w-xs truncate">${o.summary}</td>
+                        <td class="py-4 px-6 font-black text-gray-900">${o.total.toLocaleString()}원</td>
+                        <td class="py-4 px-6">
+                            <span class="px-2.5 py-1 rounded-full text-xs font-bold ${badgeColor}">${o.status}</span>
+                        </td>
+                        <td class="py-4 px-6 text-center">
+                            <button onclick="alertOrderDetail('${o.id}')" class="bg-gray-100 hover:bg-[#00a0e9] hover:text-white text-gray-600 px-3 py-1.5 rounded-xl text-xs font-semibold transition">
+                                내역서 보기
+                            </button>
+                        </td>
+                    </tr>
+                `;
+            });
+        }
+
+        function alertOrderDetail(orderId) {
+            const ord = orders.find(o => o.id === orderId);
+            if(ord) {
+                alert(`[채널펫 발주서 상세]\n- 발주번호: ${ord.id}\n- 거래처: ${ord.client}\n- 담당사원: ${ord.rep}\n- 품목요약: ${ord.summary}\n- 총금액: ${ord.total.toLocaleString()}원\n- 상태: ${ord.status}`);
+            }
+        }
+
+        // Sales Rep Dashboard Rendering
+        function renderAssignedClients() {
+            const list = document.getElementById('assigned-clients-list');
+            list.innerHTML = '';
+            assignedClients.forEach(c => {
+                list.innerHTML += `
+                    <div class="p-3.5 rounded-2xl bg-gray-50 border border-gray-100 flex justify-between items-center">
+                        <div>
+                            <h4 class="font-bold text-gray-900 text-xs">${c.name}</h4>
+                            <p class="text-[11px] text-gray-500">대표: ${c.owner} | 연락처: ${c.phone}</p>
+                        </div>
+                        <span class="text-[10px] bg-emerald-100 text-emerald-800 px-2 py-0.5 rounded-full font-semibold">정상거래</span>
+                    </div>
+                `;
+            });
+        }
+
+        // Role & Auth Switcher
+        function openRoleModal() { document.getElementById('role-modal').classList.remove('hidden'); }
+        function closeRoleModal() { document.getElementById('role-modal').classList.add('hidden'); }
+        
+        function openSignupModal() { document.getElementById('signup-modal').classList.remove('hidden'); }
+        function closeSignupModal() { document.getElementById('signup-modal').classList.add('hidden'); }
+
+        function setUserRole(role, name, rep) {
+            currentUser.role = role;
+            currentUser.name = name;
+            currentUser.salesRep = rep;
+
+            updateRoleUI();
+
+            // Show/Hide Nav based on Role
+            if(role === 'sales') {
+                document.getElementById('nav-dashboard').classList.remove('hidden');
+                document.getElementById('nav-admin').classList.add('hidden');
+                switchView('dashboard');
+            } else if(role === 'admin') {
+                document.getElementById('nav-dashboard').classList.add('hidden');
+                document.getElementById('nav-admin').classList.remove('hidden');
+                switchView('admin');
+            } else {
+                document.getElementById('nav-dashboard').classList.add('hidden');
+                document.getElementById('nav-admin').classList.add('hidden');
+                switchView('catalog');
+            }
+
+            closeRoleModal();
+        }
+
+        // Signup Handler
+        function handleSignup(e) {
+            e.preventDefault();
+            const company = document.getElementById('signup-company').value;
+            const owner = document.getElementById('signup-owner').value;
+            const bizno = document.getElementById('signup-bizno').value;
+            const rep = document.getElementById('signup-rep').value;
+
+            assignedClients.push({ name: company, owner: owner, bizno: bizno, phone: '010-9999-8888', lastOrder: '신규가입' });
+            currentUser = { name: company, role: 'client', salesRep: rep };
+
+            document.getElementById('current-user-name').textContent = company + ' (업체)';
+            document.getElementById('current-user-role').textContent = '담당: ' + rep;
+
+            closeSignupModal();
+            switchView('catalog');
+            alert(`[회원가입 완료]\n'${company}' 업체가 성공적으로 가입되었으며, 담당 영업사원인 '${rep}'님과 매핑되었습니다!`);
+            renderAssignedClients();
+            renderAdminMapping();
+        }
+
+        // Excel Download Simulations
+        function downloadClientExcel() {
+            alert('[엑셀 다운로드 완료]\n장바구니 발주서 내역이 깔끔한 엑셀(.xlsx) 형식으로 다운로드되었습니다.');
+        }
+
+        function downloadMasterExcel() {
+            alert('[전체 발주 리스트 엑셀 다운로드]\n마스터 총괄 발주 데이터가 엑셀 파일로 다운로드되었습니다.');
+        }
+
+        function downloadRepExcel() {
+            alert('[담당 발주 내역 엑셀 다운로드]\n김영업 대리 담당 20개사의 발주 내역이 엑셀로 일괄 다운로드되었습니다.');
+        }
+
+        // Admin Tabs & CRUD
+        function switchAdminTab(tab) {
+            currentAdminTab = tab;
+            if(tab === 'products') {
+                document.getElementById('admin-content-products').classList.remove('hidden');
+                document.getElementById('admin-content-mapping').classList.add('hidden');
+                document.getElementById('admin-tab-products').className = 'px-4 py-2 bg-[#222222] text-white rounded-xl text-xs font-bold transition';
+                document.getElementById('admin-tab-mapping').className = 'px-4 py-2 bg-white text-gray-600 hover:bg-gray-100 rounded-xl text-xs font-bold transition';
+            } else {
+                document.getElementById('admin-content-products').classList.add('hidden');
+                document.getElementById('admin-content-mapping').classList.remove('hidden');
+                document.getElementById('admin-tab-mapping').className = 'px-4 py-2 bg-[#222222] text-white rounded-xl text-xs font-bold transition';
+                document.getElementById('admin-tab-products').className = 'px-4 py-2 bg-white text-gray-600 hover:bg-gray-100 rounded-xl text-xs font-bold transition';
+            }
+        }
+
+        function renderAdminProducts() {
+            const container = document.getElementById('admin-product-table');
+            container.innerHTML = '';
+            products.forEach(p => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-3 rounded-2xl bg-gray-50 border border-gray-100">
+                        <div class="flex items-center space-x-3">
+                            <img src="${p.image}" class="w-12 h-12 rounded-xl object-cover">
+                            <div>
+                                <h4 class="font-bold text-gray-900 text-xs">${p.name}</h4>
+                                <p class="text-[11px] text-gray-500">공급가: ${p.price.toLocaleString()}원 | MOQ: ${p.moq}개 | 재고: ${p.stock}개</p>
+                            </div>
+                        </div>
+                        <span class="text-xs bg-[#00a0e9]/10 text-[#00a0e9] px-3 py-1 rounded-full font-bold">카페24 연동됨</span>
+                    </div>
+                `;
+            });
+        }
+
+        function renderAdminMapping() {
+            const container = document.getElementById('admin-mapping-container');
+            container.innerHTML = '';
+            assignedClients.forEach(c => {
+                container.innerHTML += `
+                    <div class="flex items-center justify-between p-3.5 rounded-2xl bg-gray-50 border border-gray-100 text-xs">
+                        <div>
+                            <span class="font-bold text-gray-900 text-sm">${c.name}</span>
+                            <span class="text-gray-400 ml-2">대표: ${c.owner}</span>
+                        </div>
+                        <div class="flex items-center space-x-2">
+                            <span class="bg-[#00a0e9] text-white px-3 py-1 rounded-lg font-semibold">담당: 김영업 대리</span>
+                        </div>
+                    </div>
+                `;
+            });
+        }
+
+        function openAddProductModal() {
+            document.getElementById('admin-product-modal').classList.remove('hidden');
+        }
+        function closeAddProductModal() {
+            document.getElementById('admin-product-modal').classList.add('hidden');
+        }
+
+        function handleSaveProduct(e) {
+            e.preventDefault();
+            const name = document.getElementById('edit-prod-name').value;
+            const category = document.getElementById('edit-prod-cat').value;
+            const price = Number(document.getElementById('edit-prod-price').value);
+            const moq = Number(document.getElementById('edit-prod-moq').value);
+            const stock = Number(document.getElementById('edit-prod-stock').value);
+            const image = document.getElementById('edit-prod-img').value;
+
+            products.push({ id: products.length + 1, name, category, price, moq, stock, image, desc: '신규 등록된 채널펫 프리미엄 상품입니다.' });
+            closeAddProductModal();
+            renderProducts();
+            renderAdminProducts();
+            alert('새로운 상품이 성공적으로 등록되어 카페24 연동 및 카탈로그에 반영되었습니다!');
+        }
+
+        // Product Detail Modal
+        function openDetailModal(id) {
+            const p = products.find(item => item.id === id);
+            if(!p) return;
+            const content = document.getElementById('detail-content');
+            content.innerHTML = `
+                <img src="${p.image}" class="w-full h-56 object-cover rounded-2xl shadow-sm">
+                <div class="space-y-2">
+                    <span class="bg-[#00a0e9]/10 text-[#00a0e9] text-xs font-bold px-2.5 py-1 rounded-lg">${p.category}</span>
+                    <h3 class="text-lg font-black text-gray-900">${p.name}</h3>
+                    <p class="text-xs text-gray-600 leading-relaxed">${p.desc}</p>
+                    <div class="pt-2 flex justify-between items-center border-t border-gray-100">
+                        <div>
+                            <span class="text-xs text-gray-400 block">공급가 (VAT 별도)</span>
+                            <span class="text-xl font-black text-gray-900">${p.price.toLocaleString()}원</span>
+                        </div>
+                        <div class="text-right">
+                            <span class="text-xs text-emerald-600 font-bold block">최소발주수량(MOQ): ${p.moq}개</span>
+                            <span class="text-xs text-gray-500">재고 수량: ${p.stock}개</span>
+                        </div>
+                    </div>
+                </div>
+                <div class="pt-4 flex space-x-2">
+                    <a href="https://chpet.kr" target="_blank" class="flex-1 bg-gray-100 hover:bg-gray-200 text-gray-700 py-3 rounded-xl font-bold text-center text-xs transition flex items-center justify-center space-x-1">
+                        <i class="fa-solid fa-globe"></i>
+                        <span>채널펫 공식몰(chpet.kr) 확인</span>
+                    </a>
+                    <button onclick="addToCart(${p.id}); closeDetailModal();" class="flex-1 bg-[#00a0e9] hover:bg-[#0085c2] text-white py-3 rounded-xl font-bold text-xs transition shadow-md">
+                        장바구니 담기
+                    </button>
+                </div>
+            `;
+            document.getElementById('detail-modal').classList.remove('hidden');
+        }
+        function closeDetailModal() {
+            document.getElementById('detail-modal').classList.add('hidden');
+        }
+    </script>
+</body>
+</html>
